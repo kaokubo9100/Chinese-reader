@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国語お話集</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400&display=swap');
+  :root {
+    --bg:#fdf6ec; --paper:#fffcf5; --ink:#2c1a0e;
+    --accent:#c0392b; --gold:#d4a017;
+    --hl-bg:#ffe066; --hl-fg:#8b1a00;
+    --shadow:rgba(44,26,14,0.13); --border:#e8d5b0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Noto Sans SC',sans-serif;color:var(--ink);}
+
+  #menu-screen{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);padding:1.5rem 1rem 3rem;display:flex;flex-direction:column;align-items:center;}
+  .menu-header{text-align:center;margin-bottom:1.6rem;}
+  .menu-header h1{font-family:'Noto Serif SC',serif;font-size:1.6rem;color:var(--accent);letter-spacing:0.12em;text-shadow:1px 2px 0 #f5cba7;}
+  .menu-header p{font-size:0.78rem;color:#9a7a5a;margin-top:0.3rem;}
+  .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;max-width:640px;width:100%;}
+  .menu-card{background:var(--paper);border:1.5px solid var(--border);border-radius:8px;box-shadow:2px 3px 8px var(--shadow);padding:0.9rem 1rem;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:0.7rem;}
+  .menu-card:active{background:#fff8ee;border-color:var(--gold);}
+  .card-num{font-family:'Noto Serif SC',serif;font-size:1.1rem;font-weight:700;color:var(--gold);min-width:1.6rem;text-align:center;}
+  .card-title{font-family:'Noto Serif SC',serif;font-size:0.95rem;color:var(--ink);line-height:1.4;}
+
+  #reader-screen{display:none;position:fixed;inset:0;}
+  #controls{position:absolute;top:0;left:0;right:0;z-index:100;background:var(--paper);border-bottom:2px solid var(--border);box-shadow:0 2px 10px var(--shadow);padding:0.6rem 0.9rem 0.5rem;display:flex;flex-direction:column;gap:0.5rem;}
+  .ctrl-row{display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;}
+  .btn{border:none;border-radius:6px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;font-size:0.88rem;padding:0.4rem 1rem;transition:all 0.15s;}
+  .btn:disabled{opacity:0.4;cursor:default;}
+  .btn-back{background:#e8d5b0;color:var(--ink);font-size:0.82rem;padding:0.35rem 0.7rem;}
+  .btn-play{background:var(--accent);color:#fff;}
+  .btn-pause{background:#f5cba7;color:#7a3b10;}
+  .btn-stop{background:#e8d5b0;color:var(--ink);}
+  .lbl{font-size:0.72rem;color:#9a7a5a;white-space:nowrap;}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:linear-gradient(to right,var(--gold),var(--accent));flex:1;min-width:70px;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-shadow:0 1px 4px var(--shadow);}
+  .speed-val{font-size:0.78rem;color:var(--accent);font-weight:700;min-width:2.3rem;text-align:right;}
+  select{border:1px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);font-size:0.78rem;padding:0.22rem 0.45rem;cursor:pointer;max-width:190px;}
+  .prog-bg{background:#ede2cc;border-radius:3px;height:4px;flex:1;overflow:hidden;min-width:50px;}
+  .prog-fill{height:100%;background:linear-gradient(to right,var(--gold),var(--accent));width:0%;transition:width 0.3s;border-radius:3px;}
+  #status{font-size:0.68rem;color:#b08060;text-align:right;}
+  #reader-title{font-family:'Noto Serif SC',serif;font-size:1.0rem;color:var(--accent);font-weight:700;letter-spacing:0.1em;}
+  .hint{font-size:0.65rem;color:#b08060;text-align:center;}
+
+  #story-wrap{position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  #story-inner{max-width:640px;margin:0 auto;padding:1rem 1.4rem 3rem;}
+  .story-title-display{font-family:'Noto Serif SC',serif;font-size:1.25rem;color:var(--accent);text-align:center;margin-bottom:1.1rem;letter-spacing:0.15em;border-bottom:2px solid var(--gold);padding-bottom:0.5rem;}
+  #story-text{font-family:'Noto Serif SC',serif;font-size:1.06rem;line-height:2.2;letter-spacing:0.04em;}
+  .para{display:block;margin-bottom:1em;}
+  .chunk{display:inline;border-radius:4px;padding:1px 2px;cursor:pointer;transition:background 0.1s,color 0.1s;}
+  .chunk:hover{background:#f0e0b0;}
+  .chunk.active{background:var(--hl-bg);color:var(--hl-fg);font-weight:700;box-shadow:0 2px 0 var(--gold);}
+  .chunk.tapped{background:#ffb347;transition:none;}
+  .chunk.dict-hl{background:#d4f0ff;color:#003a5c;}
+
+  /* DICT POPUP */
+  #dict-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(44,26,14,0.35);align-items:flex-end;justify-content:center;}
+  #dict-overlay.show{display:flex;}
+  #dict-popup{background:var(--paper);border-radius:16px 16px 0 0;border-top:2px solid var(--border);box-shadow:0 -4px 24px var(--shadow);width:100%;max-width:640px;padding:1.2rem 1.4rem 2.5rem;position:relative;max-height:72vh;overflow-y:auto;}
+  #dict-close{position:absolute;top:0.8rem;right:1rem;background:none;border:none;font-size:1.5rem;color:#b08060;cursor:pointer;line-height:1;}
+  #dict-word{font-family:'Noto Serif SC',serif;font-size:1.7rem;color:var(--ink);letter-spacing:0.1em;margin-bottom:0.15rem;}
+  #dict-pinyin{font-size:1.05rem;color:var(--accent);letter-spacing:0.12em;margin-bottom:0.9rem;font-style:italic;}
+  #dict-body{font-size:0.92rem;line-height:1.85;color:var(--ink);}
+  .dict-label{font-size:0.7rem;color:#9a7a5a;letter-spacing:0.08em;margin-bottom:0.15rem;}
+  .dict-content{margin-bottom:0.7rem;}
+  .dict-example{color:#5a3a1a;font-style:italic;font-size:0.86rem;margin-top:0.2rem;}
+  #dict-loading{text-align:center;padding:2rem 0;color:#b08060;}
+  #dict-play-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:0.4rem 1rem;font-size:0.85rem;cursor:pointer;margin-top:1rem;}
+</style>
+</head>
+<body>
+
+<div id="menu-screen">
+  <div class="menu-header">
+    <h1>📖 中国語お話集</h1>
+    <p>読みたいお話をタップしてください</p>
+  </div>
+  <div class="menu-grid" id="menu-grid"></div>
+</div>
+
+<div id="reader-screen">
+  <div id="controls">
+    <div class="ctrl-row">
+      <button class="btn btn-back" id="btn-back">← 一覧</button>
+      <span id="reader-title"></span>
+      <div class="prog-bg"><div class="prog-fill" id="prog"></div></div>
+    </div>
+    <div class="ctrl-row">
+      <button class="btn btn-play" id="btn-play">▶ 読む</button>
+      <button class="btn btn-pause" id="btn-pause" disabled>⏸ 一時停止</button>
+      <button class="btn btn-stop" id="btn-stop" disabled>⏹ 止める</button>
+    </div>
+    <div class="ctrl-row">
+      <span class="lbl">速さ</span><span class="lbl">遅</span>
+      <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="0.9">
+      <span class="lbl">速</span>
+      <span class="speed-val" id="speed-val">0.9×</span>
+      <span class="lbl" style="margin-left:0.4rem">音声</span>
+      <select id="voice-select"><option>読み込み中…</option></select>
+    </div>
+    <div id="status">準備完了</div>
+    <div class="hint">タップ：辞書　長押し：そこから読む</div>
+  </div>
+  <div id="story-wrap">
+    <div id="story-inner">
+      <div class="story-title-display" id="story-title-display"></div>
+      <div id="story-text"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DICT POPUP -->
+<div id="dict-overlay">
+  <div id="dict-popup">
+    <button id="dict-close">×</button>
+    <div id="dict-word"></div>
+    <div id="dict-pinyin"></div>
+    <div id="dict-body"><div id="dict-loading">🔍 調べています…</div></div>
+    <button id="dict-play-btn">▶ ここから読む</button>
+  </div>
+</div>
+
+<script>
+const STORIES = [{"title":"爱美的美美","data":[{"p":0,"t":"大家都说，"},{"p":0,"t":"美美真像个小公主。"},{"p":0,"t":"因为美美不但长得好看，"},{"p":0,"t":"而且她的妈妈每天都会给她穿上漂亮的衣服，"},{"p":0,"t":"把她打扮得美丽极了。"},{"p":1,"t":"有一天早上，"},{"p":1,"t":"美美不想穿妈妈准备好的绿色裙子，"},{"p":1,"t":"因为那天小朋友们要在草地上做游戏，"},{"p":1,"t":"穿粉红色的裙子才漂亮呢！"},{"p":1,"t":"但是妈妈急着去上班，"},{"p":1,"t":"还是给美美穿上了绿色的裙子。"},{"p":1,"t":"美美很不高兴。"},{"p":1,"t":"果然，"},{"p":1,"t":"大家在草地上玩的时候，"},{"p":1,"t":"只有美美的衣服最不显眼，"},{"p":1,"t":"也没有人夸奖美美像小公主了。"},{"p":1,"t":"美美噘着嘴巴想："},{"p":1,"t":"如果我自己会穿衣服就好了！"},{"p":2,"t":"从那以后，"},{"p":2,"t":"美美特别认真地学习穿衣服。"},{"p":2,"t":"终于有一天，"},{"p":2,"t":"她不再依靠妈妈穿衣服了。"},{"p":2,"t":"现在，"},{"p":2,"t":"大家都夸美美漂亮又能干。"},{"p":3,"t":"亲子心语"},{"p":4,"t":"宝贝，"},{"p":4,"t":"你想不想像美美一样又漂亮又能干呀？"},{"p":4,"t":"那么从现在起，"},{"p":4,"t":"事情自己做，"},{"p":4,"t":"自立自强的孩子不仅爸爸妈妈喜欢，"},{"p":4,"t":"也会受到小伙伴们的欢迎，"},{"p":4,"t":"这样你才会成为最美的孩子。"}]},{"title":"爱心银币","data":[{"p":0,"t":"从前有个善良的小女孩，"},{"p":0,"t":"她的父母很早就去世了，"},{"p":0,"t":"她每天都过着流浪的生活。"},{"p":0,"t":"寒冷的冬天里，"},{"p":0,"t":"小女孩既没有可以藏身的屋子，"},{"p":0,"t":"也没有可以睡觉的小床。"},{"p":0,"t":"事实上，"},{"p":0,"t":"她除了身上穿的衣服、"},{"p":0,"t":"头上戴的一顶帽子和手上拿的一小块面包外，"},{"p":0,"t":"什么也没有。"},{"p":1,"t":"有一天，"},{"p":1,"t":"小女孩在外头碰到了一位老人。"},{"p":1,"t":"老人对她说："},{"p":1,"t":"行行好，"},{"p":1,"t":"给我点儿吃的吧！"},{"p":1,"t":"小女孩毫不犹豫地把自己仅有的一块面包给了他。"},{"p":2,"t":"没过一会儿，"},{"p":2,"t":"小女孩又遇到一个冻得直发抖的男孩。"},{"p":2,"t":"男孩哀求道："},{"p":2,"t":"我好冷，"},{"p":2,"t":"求求你给我点东西挡挡风，"},{"p":2,"t":"好吗？"},{"p":2,"t":"小女孩摘下自己的帽子递给了他，"},{"p":2,"t":"并祝福他说："},{"p":2,"t":"上帝保佑你。"},{"p":3,"t":"小女孩继续往前走，"},{"p":3,"t":"又看见一个孩子没穿褂子，"},{"p":3,"t":"冷得打战，"},{"p":3,"t":"于是脱下褂子给那孩子穿上。"},{"p":4,"t":"现在，"},{"p":4,"t":"小女孩身上只剩一件内衣了，"},{"p":4,"t":"她冻得直哆嗦。"},{"p":4,"t":"傍晚，"},{"p":4,"t":"她走进一片森林，"},{"p":4,"t":"看见一个小女孩靠在一棵大树旁，"},{"p":4,"t":"快要冻死了。"},{"p":4,"t":"小女孩顾不上寒冷，"},{"p":4,"t":"脱下自己最后一件衣服，"},{"p":4,"t":"把那个女孩裹好了。"},{"p":5,"t":"当她一无所有地站在黑暗的森林中时，"},{"p":5,"t":"天上的星星忽然纷纷掉落在她的身旁。"},{"p":5,"t":"她仔细一看，"},{"p":5,"t":"掉到地上的全都变成了硬邦邦、"},{"p":5,"t":"亮晶晶的爱心银币。"},{"p":5,"t":"这时候，"},{"p":5,"t":"小女孩身上忽然有了一件温暖而漂亮的衣服，"},{"p":5,"t":"那是用世界上最好的布料做的。"},{"p":6,"t":"小女孩高兴极了，"},{"p":6,"t":"她弯腰捡起地上的爱心银币，"},{"p":6,"t":"把它们分给许许多多的穷人，"},{"p":6,"t":"和他们一起过着幸福快乐的生活。"},{"p":7,"t":"亲子心语"},{"p":8,"t":"小女孩虽然一无所有，"},{"p":8,"t":"但她的善良最终帮助她获得了幸福的生活。"},{"p":8,"t":"我们每个人都应该像她一样，"},{"p":8,"t":"心怀善意，"},{"p":8,"t":"助人为乐，"},{"p":8,"t":"向需要帮助的人伸出自己的援助之手。"},{"p":8,"t":"宝贝，"},{"p":8,"t":"试试看，"},{"p":8,"t":"你得到的一定比你失去的多。"}]},{"title":"爱用词的奇奇","data":[{"p":0,"t":"奇奇最近学了不少新词语，"},{"p":0,"t":"很想把它们用在生活中。"},{"p":0,"t":"这天，"},{"p":0,"t":"奇奇看见邻居王爷爷正在遛狗，"},{"p":0,"t":"便上前说："},{"p":0,"t":"王爷爷，"},{"p":0,"t":"您这只走狗真可爱！"},{"p":0,"t":"王爷爷听了，"},{"p":0,"t":"气得胡子都翘起来了，"},{"p":0,"t":"牵着小狗就走了。"},{"p":1,"t":"晚上，"},{"p":1,"t":"奇奇的小姑在看电视剧，"},{"p":1,"t":"被剧情感动得哭了。"},{"p":1,"t":"奇奇又说："},{"p":1,"t":"姑姑，"},{"p":1,"t":"你这是鳄鱼的眼泪！"},{"p":1,"t":"小姑噘起了嘴，"},{"p":1,"t":"说："},{"p":1,"t":"去，"},{"p":1,"t":"一边去。"},{"p":1,"t":"奇奇不明白为什么大家听了他的话都不高兴，"},{"p":1,"t":"就把他说的话告诉了妈妈。"},{"p":2,"t":"妈妈笑着说："},{"p":2,"t":"傻孩子，"},{"p":2,"t":"走狗是指专帮人干坏事的人；"},{"p":2,"t":"鳄鱼的眼泪是指虚伪的同情。"},{"p":2,"t":"你这么说别人，"},{"p":2,"t":"他们当然生气了。"},{"p":2,"t":"奇奇这才明白，"},{"p":2,"t":"原来是自己搞错了。"},{"p":2,"t":"从此，"},{"p":2,"t":"他再也不乱用词语了。"},{"p":3,"t":"亲子心语"},{"p":4,"t":"奇奇没有完全弄明白词语的意思，"},{"p":4,"t":"就开始乱用，"},{"p":4,"t":"结果闹出不少笑话。"},{"p":4,"t":"如果我们像奇奇那样，"},{"p":4,"t":"在不了解词义的情况下胡乱使用，"},{"p":4,"t":"不仅会被人取笑，"},{"p":4,"t":"也许还会无意间伤害到别人。"}]},{"title":"鼻子不见了","data":[{"p":0,"t":"一天早上，"},{"p":0,"t":"小新去照镜子。"},{"p":0,"t":"他被镜子里自己的模样吓了一大跳："},{"p":0,"t":"天哪！"},{"p":0,"t":"我的鼻子不见了！"},{"p":0,"t":"他赶紧四下寻找，"},{"p":0,"t":"只见自己的鼻子出了家门，"},{"p":0,"t":"正朝码头跑去。"},{"p":1,"t":"小新急忙下楼去追鼻子。"},{"p":1,"t":"他一边跑一边用手帕捂着脸，"},{"p":1,"t":"生怕被人看到自己的怪模样。"},{"p":1,"t":"可是，"},{"p":1,"t":"鼻子跑得太快，"},{"p":1,"t":"转眼就跑得无影无踪了。"},{"p":2,"t":"几天后，"},{"p":2,"t":"小新的妈妈去菜市场买菜，"},{"p":2,"t":"没想到在一个鱼摊上发现了小新的鼻子，"},{"p":2,"t":"她赶紧把鼻子买了回来。"},{"p":2,"t":"小新看到鼻子高兴极了，"},{"p":2,"t":"可是又很生气。"},{"p":2,"t":"他大声质问鼻子为什么逃跑。"},{"p":2,"t":"鼻子生气地说："},{"p":2,"t":"你的指甲那么长，"},{"p":2,"t":"还总喜欢把手指头放到我的身体里，"},{"p":2,"t":"我实在受不了了！"},{"p":3,"t":"亲子心语"},{"p":4,"t":"不剪指甲、"},{"p":4,"t":"用手挖鼻孔可不是好习惯。"},{"p":4,"t":"不讲卫生的坏习惯不仅会害我们生病，"},{"p":4,"t":"还会让我们变成不受欢迎的人。"},{"p":4,"t":"想想看，"},{"p":4,"t":"如果连自己的鼻子都因为讨厌你而逃跑了，"},{"p":4,"t":"又有谁会愿意和你做朋友呢？"}]},{"title":"不爱干净的小野猪","data":[{"p":0,"t":"从前有一只小野猪，"},{"p":0,"t":"特别不爱干净。"},{"p":0,"t":"一天，"},{"p":0,"t":"小野猪跳进了泥塘里。"},{"p":0,"t":"等他爬上来时，"},{"p":0,"t":"满身都是泥，"},{"p":0,"t":"只露出两个转来转去的眼珠。"},{"p":0,"t":"小野猪没有去洗澡，"},{"p":0,"t":"继续蹦呀，"},{"p":0,"t":"跳呀，"},{"p":0,"t":"结果一不小心滑倒了，"},{"p":0,"t":"滚倒在疯长草的草丛里。"},{"p":0,"t":"等小野猪跑出来时，"},{"p":0,"t":"全身都已经长满了疯长草。"},{"p":1,"t":"这时，"},{"p":1,"t":"一只小鸟飞过，"},{"p":1,"t":"猛然看见一个长着四只脚的大草球，"},{"p":1,"t":"慌忙大叫："},{"p":1,"t":"快来捉妖怪啊！"},{"p":1,"t":"小动物们听到消息，"},{"p":1,"t":"都赶来了。"},{"p":1,"t":"他们拿起藤条、"},{"p":1,"t":"树枝追打这个大草球。"},{"p":1,"t":"小野猪吓坏了，"},{"p":1,"t":"连忙大叫："},{"p":1,"t":"别打了，"},{"p":1,"t":"我是小野猪！"},{"p":1,"t":"但是没有一个动物相信他，"},{"p":1,"t":"还是追着他打。"},{"p":1,"t":"小野猪只好没命地逃跑，"},{"p":1,"t":"一直跑到了河边，"},{"p":1,"t":"跑进了水里，"},{"p":1,"t":"才把身上的草和泥洗掉了。"},{"p":2,"t":"亲子心语"},{"p":3,"t":"小野猪因为不爱干净，"},{"p":3,"t":"惹来了大麻烦。"},{"p":3,"t":"讲卫生，"},{"p":3,"t":"爱干净，"},{"p":3,"t":"是我们应该养成的好习惯。"},{"p":3,"t":"希望我们都能成为一个爱干净的好孩子。"}]},{"title":"不听话的小花猫","data":[{"p":0,"t":"有只小花猫总喜欢和别人作对。"},{"p":0,"t":"要是别人让他做什么事，"},{"p":0,"t":"他总是反着做。"},{"p":1,"t":"这天，"},{"p":1,"t":"小花猫出去玩，"},{"p":1,"t":"看到开满鲜花的山坡上立着一块牌子："},{"p":1,"t":"不许摘花！"},{"p":1,"t":"他马上摘了一朵。"},{"p":1,"t":"到了山冈上，"},{"p":1,"t":"一棵树上挂着一块牌子："},{"p":1,"t":"不许爬树！"},{"p":1,"t":"小花猫可不管，"},{"p":1,"t":"三下两下爬上了树。"},{"p":1,"t":"在树上，"},{"p":1,"t":"他发现一个大口袋，"},{"p":1,"t":"上面写着："},{"p":1,"t":"不许钻袋子！"},{"p":1,"t":"小花猫一下就钻进了袋子。"},{"p":2,"t":"突然，"},{"p":2,"t":"一个怪物冲了过来，"},{"p":2,"t":"猛地收紧了袋口，"},{"p":2,"t":"扛起袋子就跑。"},{"p":2,"t":"原来，"},{"p":2,"t":"这个怪物知道小花猫的脾气，"},{"p":2,"t":"特意给他设下了圈套。"},{"p":2,"t":"幸好小花猫带着水果刀，"},{"p":2,"t":"他悄悄地把口袋割了个大洞，"},{"p":2,"t":"慌慌张张地溜了出来。"},{"p":3,"t":"路上，"},{"p":3,"t":"他看见路边立着不许横穿马路的牌子，"},{"p":3,"t":"这次他很乖，"},{"p":3,"t":"没有横穿马路。"},{"p":4,"t":"亲子心语"},{"p":5,"t":"你瞧，"},{"p":5,"t":"小花猫总和别人作对，"},{"p":5,"t":"差点被怪物捉走了。"},{"p":5,"t":"好在他及时认识到错误，"},{"p":5,"t":"变成了听话的乖宝宝。"},{"p":5,"t":"宝贝，"},{"p":5,"t":"如果你像小花猫一样倔强和任性，"},{"p":5,"t":"是不是也要尽早改正呢？"}]},{"title":"采草药的男孩","data":[{"p":0,"t":"采草药的男孩叫徐建成，"},{"p":0,"t":"他的妈妈很早就去世了。"},{"p":0,"t":"在他五岁那年，"},{"p":0,"t":"他的爸爸不幸得了重病，"},{"p":0,"t":"不能再做沉重的工作了。"},{"p":0,"t":"为了帮爸爸治病，"},{"p":0,"t":"小建成便开始上山给父亲采草药。"},{"p":1,"t":"建成十岁那年，"},{"p":1,"t":"医生说爸爸的病已经无法医治了。"},{"p":1,"t":"可是小建成不肯放弃，"},{"p":1,"t":"他仍然坚定地继续上山采草药，"},{"p":1,"t":"给父亲治病。"},{"p":1,"t":"无论天气多么恶劣，"},{"p":1,"t":"山路多么难走，"},{"p":1,"t":"都阻挡不了小建成。"},{"p":2,"t":"由于采草药卖钱的人越来越多，"},{"p":2,"t":"附近山上的草药基本上都被采光了，"},{"p":2,"t":"所以小建成不得不走到很远的深山里才能采到草药。"},{"p":2,"t":"赶不上吃午饭，"},{"p":2,"t":"小建成就随便摘些野果来充饥，"},{"p":2,"t":"有几次还遇到了凶猛的毒蛇和可怕的野猪。"},{"p":3,"t":"然而，"},{"p":3,"t":"无论有多艰难、"},{"p":3,"t":"多危险，"},{"p":3,"t":"小建成给父亲治病的信念从没动摇过。"},{"p":3,"t":"因为在他心里，"},{"p":3,"t":"有一个强烈的信念，"},{"p":3,"t":"那就是："},{"p":3,"t":"有父亲，"},{"p":3,"t":"我就有家！"},{"p":4,"t":"亲子心语"},{"p":5,"t":"小建成五岁就开始到深山里为父亲采草药治病，"},{"p":5,"t":"用他弱小的身体担起照顾父亲、"},{"p":5,"t":"照顾家庭的重担。"},{"p":5,"t":"看到这里，"},{"p":5,"t":"你是否想到要为爸爸妈妈做些什么表达你的感激之情呢？"}]},{"title":"查利的美丽胎记","data":[{"p":0,"t":"小查利的脸上天生有很大一块暗红的胎记，"},{"p":0,"t":"同学们因此都不愿意和他玩。"},{"p":0,"t":"小查利感到很难过，"},{"p":0,"t":"很自卑。"},{"p":1,"t":"二年级时，"},{"p":1,"t":"查利进入了伦纳德夫人的班级。"},{"p":1,"t":"善良慈爱的伦纳德夫人很快发现了查利的苦恼。"},{"p":1,"t":"于是，"},{"p":1,"t":"有一天，"},{"p":1,"t":"伦纳德夫人给全班同学讲了一个故事："},{"p":2,"t":"一位父亲请求上帝赐给自己一个与众不同的孩子，"},{"p":2,"t":"上帝便让美丽的天使在这个孩子的脸上吻了一下，"},{"p":2,"t":"留下了吻的痕迹作为记号。"},{"p":2,"t":"这样，"},{"p":2,"t":"父亲就很容易在人群中认出自己的孩子了。"},{"p":2,"t":"现在你们知道这个幸运的孩子是谁了吗？"},{"p":3,"t":"原来查利就是那个被天使吻过的小孩儿！"},{"p":3,"t":"从此，"},{"p":3,"t":"大家都争着和幸运的查利交朋友，"},{"p":3,"t":"查利也变得开朗自信了。"},{"p":4,"t":"亲子心语"},{"p":5,"t":"伦纳德夫人这个美丽的谎言充满了善意，"},{"p":5,"t":"它不但让大家喜欢上了小查利，"},{"p":5,"t":"而且还很羡慕他，"},{"p":5,"t":"小查利也因此自信起来了。"},{"p":5,"t":"对待身体有缺陷的人，"},{"p":5,"t":"我们一定要有一颗善良的心，"},{"p":5,"t":"而不应嘲笑和冷落他们。"}]},{"title":"车夫和大力神","data":[{"p":0,"t":"一个车夫赶着装满干草的车子前行，"},{"p":0,"t":"走着走着，"},{"p":0,"t":"车子突然陷进了泥坑里。"},{"p":0,"t":"无论车夫和马怎么使劲儿，"},{"p":0,"t":"车轮仍然一动不动。"},{"p":1,"t":"车夫没办法，"},{"p":1,"t":"只好向举世无双的大力神求救。"},{"p":2,"t":"在他的呼唤下，"},{"p":2,"t":"大力神果然出现了。"},{"p":2,"t":"大力神站在云端说："},{"p":2,"t":"朋友，"},{"p":2,"t":"你先看看是什么原因使你的马车困在泥坑里的。"},{"p":2,"t":"请你拿起铁锹，"},{"p":2,"t":"铲掉车轮周围的泥浆，"},{"p":2,"t":"把碍事的石子砸碎，"},{"p":2,"t":"再把车轮印子填平。"},{"p":3,"t":"车夫遵照大力神的话干起来。"},{"p":3,"t":"过了一会儿，"},{"p":3,"t":"见车夫干完了，"},{"p":3,"t":"大力神说："},{"p":3,"t":"现在，"},{"p":3,"t":"请拿起你的鞭子。"},{"p":3,"t":"我已经拿起来了……这是怎么回事，"},{"p":3,"t":"我的马车怎么走得这么轻松啊？"},{"p":3,"t":"车夫惊叹起来。"},{"p":3,"t":"大力神在云端微微一笑，"},{"p":3,"t":"转眼就消失了。"},{"p":4,"t":"亲子心语"},{"p":5,"t":"车夫通过自己的努力，"},{"p":5,"t":"清除了阻碍车子前进的泥浆和石子，"},{"p":5,"t":"自己解决了遇到的困难。"},{"p":5,"t":"宝贝，"},{"p":5,"t":"当你遇到困难的时候也可以换一个角度想想，"},{"p":5,"t":"这样就能轻松地找到好办法啦！"},{"p":5,"t":"想办法，"},{"p":5,"t":"自己解决困难，"},{"p":5,"t":"你会发现真正的大力神就是你自己。"}]},{"title":"成吉思汗赛马计","data":[{"p":0,"t":"成吉思汗是古代蒙古族的首领，"},{"p":0,"t":"名叫铁木真。"},{"p":0,"t":"他非常聪明，"},{"p":0,"t":"小时候就表现出过人的才智。"},{"p":1,"t":"一天，"},{"p":1,"t":"草原上举行了一次特殊的赛马比赛。"},{"p":1,"t":"说它特殊，"},{"p":1,"t":"是因为这次比赛的规则是："},{"p":1,"t":"最后一匹到达终点的马获胜。"},{"p":2,"t":"比赛开始了，"},{"p":2,"t":"骑手们刚一离开起跑线，"},{"p":2,"t":"就都死死地拉住马缰绳，"},{"p":2,"t":"谁也不愿意向前挪动一步。"},{"p":2,"t":"过了好长时间，"},{"p":2,"t":"马儿们还在起跑线附近徘徊，"},{"p":2,"t":"眼看着天就要黑了，"},{"p":2,"t":"观看比赛的观众都有些不耐烦了。"},{"p":2,"t":"怎样打破这种僵局呢？"},{"p":2,"t":"人们都绞尽了脑汁，"},{"p":2,"t":"但是谁都想不出什么好办法。"},{"p":3,"t":"就在这时，"},{"p":3,"t":"年仅十二岁的铁木真跑进了赛马场，"},{"p":3,"t":"只见他和骑手们说了几句话，"},{"p":3,"t":"赛场上就立刻活跃起来。"},{"p":3,"t":"接着，"},{"p":3,"t":"只听他一声号令："},{"p":3,"t":"预备，"},{"p":3,"t":"跑！"},{"p":3,"t":"就见原先磨磨蹭蹭的骑手们纷纷策马扬鞭，"},{"p":3,"t":"向前飞奔，"},{"p":3,"t":"唯恐落在别人后面。"},{"p":3,"t":"很快，"},{"p":3,"t":"比赛结束了，"},{"p":3,"t":"跑得最慢的那匹马赢得了最终的胜利。"},{"p":4,"t":"这是怎么回事呢？"},{"p":4,"t":"原来，"},{"p":4,"t":"铁木真让骑手们互换了马匹，"},{"p":4,"t":"这样一来，"},{"p":4,"t":"每个骑手骑的都是别人的马，"},{"p":4,"t":"而只有让别人的马跑得最快，"},{"p":4,"t":"自己的马才有可能获胜，"},{"p":4,"t":"所以骑手们就拼命快马加鞭了。"},{"p":5,"t":"亲子心语"},{"p":6,"t":"小铁木真没有按常规思路解决问题，"},{"p":6,"t":"而是巧妙地修改了比赛规则，"},{"p":6,"t":"使比赛得以顺利进行。"},{"p":6,"t":"宝贝，"},{"p":6,"t":"当你遇到问题的时候，"},{"p":6,"t":"也可以换一个角度想想，"},{"p":6,"t":"这样就能轻松地找到好办法啦！"}]},{"title":"池塘里的青蛙","data":[{"p":0,"t":"在一个小池塘里，"},{"p":0,"t":"生活着两只青蛙。"},{"p":0,"t":"炎热的夏天到了，"},{"p":0,"t":"由于天气特别热，"},{"p":0,"t":"池塘里的水越来越少，"},{"p":0,"t":"最后慢慢地干枯了。"},{"p":0,"t":"两只青蛙只好离开那里，"},{"p":0,"t":"去寻找一个新的家。"},{"p":1,"t":"一天，"},{"p":1,"t":"他们在路边发现了一口很深的井。"},{"p":1,"t":"一只青蛙连忙把头探到井里："},{"p":1,"t":"啊，"},{"p":1,"t":"好凉快啊！"},{"p":1,"t":"这里一定有很多的水，"},{"p":1,"t":"我们就在这里安家吧！"},{"p":1,"t":"说着，"},{"p":1,"t":"他迫不及待地就想跳下去。"},{"p":2,"t":"这时，"},{"p":2,"t":"另一只青蛙拉住了他："},{"p":2,"t":"这口井这么深，"},{"p":2,"t":"如果我们跳下去就很可能再也出不来了。"},{"p":2,"t":"如果哪天井里的水也干了，"},{"p":2,"t":"我们就只有等死了！"},{"p":2,"t":"我听说前面有一条大河，"},{"p":2,"t":"不如我们一起去找找看吧。"},{"p":3,"t":"于是，"},{"p":3,"t":"两只青蛙又接着向前走去。"},{"p":3,"t":"没过多久，"},{"p":3,"t":"果然有一条宽阔的大河出现在他们面前。"},{"p":3,"t":"这下，"},{"p":3,"t":"他们终于找到满意的新家了！"},{"p":4,"t":"亲子心语"},{"p":5,"t":"与狭小的水井相比，"},{"p":5,"t":"大河就显得开阔多了。"},{"p":5,"t":"在那里，"},{"p":5,"t":"青蛙们有了更广阔的天地。"},{"p":5,"t":"拥有远大的目标，"},{"p":5,"t":"并向着目标不断前进，"},{"p":5,"t":"我们就会像故事里的青蛙一样拥有更加美好的未来！"}]},{"title":"吹牛的青蛙","data":[{"p":0,"t":"早晨，"},{"p":0,"t":"一只瘸腿青蛙来到市场上，"},{"p":0,"t":"在那儿支起摊位，"},{"p":0,"t":"摆放了五颜六色、"},{"p":0,"t":"大小不一的瓶子。"},{"p":0,"t":"然后，"},{"p":0,"t":"他爬到高高的箱子上，"},{"p":0,"t":"对着来来往往的小动物大声吆喝："},{"p":0,"t":"我是一位著名的大夫，"},{"p":0,"t":"医术非常高明。"},{"p":0,"t":"我卖的药包治百病，"},{"p":0,"t":"大家快来领教领教我的高超医术吧！"},{"p":1,"t":"青蛙的吆喝还真管用，"},{"p":1,"t":"没多久，"},{"p":1,"t":"他身边围过来很多小动物，"},{"p":1,"t":"生意很快就红火起来。"},{"p":1,"t":"不久，"},{"p":1,"t":"站在一旁观看的狐狸喊道："},{"p":1,"t":"既然你是一位高明的医生，"},{"p":1,"t":"那为什么你治不好自己的瘸腿，"},{"p":1,"t":"而且肉皮上面又满是疙瘩和褶皱呢？"},{"p":2,"t":"狐狸的话提醒了大家，"},{"p":2,"t":"大家看着青蛙那副滑稽的模样，"},{"p":2,"t":"都哈哈大笑起来。"},{"p":2,"t":"青蛙羞得满脸通红，"},{"p":2,"t":"只好收拾起东西，"},{"p":2,"t":"一瘸一拐地回家去了。"},{"p":3,"t":"亲子心语"},{"p":4,"t":"青蛙连自己的病都治不好，"},{"p":4,"t":"怎么能治好别人呢？"},{"p":4,"t":"光知道吹牛，"},{"p":4,"t":"却没有真本事，"},{"p":4,"t":"谎言迟早会被人戳穿的。"},{"p":4,"t":"而最终的结果也只能像青蛙那样，"},{"p":4,"t":"在大家的嘲笑声中灰溜溜地逃走。"}]},{"title":"聪明人与猿猴","data":[{"p":0,"t":"从前，"},{"p":0,"t":"有两个人在海上遇到风浪，"},{"p":0,"t":"被冲到了猿猴国。"},{"p":0,"t":"他们被带到猿猴王的面前。"},{"p":0,"t":"猿猴王问："},{"p":0,"t":"你们看我是一位怎样的国王？"},{"p":0,"t":"聪明人说："},{"p":0,"t":"尊敬的陛下，"},{"p":0,"t":"您是我见过最有权力的国王，"},{"p":0,"t":"而他们都是你的栋梁之材。"},{"p":0,"t":"猿猴王听了非常满意，"},{"p":0,"t":"于是送给聪明人很多礼物。"},{"p":1,"t":"另外一个人想："},{"p":1,"t":"哼，"},{"p":1,"t":"明明是一群猿猴，"},{"p":1,"t":"却说什么国王和栋梁。"},{"p":1,"t":"这些蠢家伙连谎话都相信，"},{"p":1,"t":"我要是说了真话，"},{"p":1,"t":"他还不得把国王的位子让给我？"},{"p":2,"t":"于是，"},{"p":2,"t":"这个人说："},{"p":2,"t":"陛下，"},{"p":2,"t":"您是我见过的最优秀的猿猴王，"},{"p":2,"t":"而他们是一群聪明的猿猴。"},{"p":3,"t":"谁知，"},{"p":3,"t":"猿猴王听了这话恼羞成怒，"},{"p":3,"t":"命手下将他扔回了大海！"},{"p":4,"t":"亲子心语"},{"p":5,"t":"自己明明就是猿猴，"},{"p":5,"t":"但当别人这样说他的时候，"},{"p":5,"t":"猿猴王却生气了。"},{"p":5,"t":"这只蠢猴子不明白一个道理，"},{"p":5,"t":"无论别人怎么称呼他，"},{"p":5,"t":"也改变不了他是猴子的事实。"},{"p":5,"t":"我们可不能像猿猴王这样只听别人的夸赞啊！"}]},{"title":"带箭的朋友","data":[{"p":0,"t":"小兔子、"},{"p":0,"t":"小鸭子和小猴子正在草地上跳皮筋儿，"},{"p":0,"t":"身上带箭的箭猪可怜巴巴地走了过来，"},{"p":0,"t":"想和他们一起玩。"},{"p":0,"t":"小猴子做了个鬼脸说："},{"p":0,"t":"噢，"},{"p":0,"t":"你这么可怕，"},{"p":0,"t":"还是在旁边看着吧！"},{"p":0,"t":"小兔子热情地对箭猪说："},{"p":0,"t":"别理小猴子，"},{"p":0,"t":"他在逗你玩呢！"},{"p":0,"t":"于是，"},{"p":0,"t":"他们带着箭猪一起开心地玩了起来。"},{"p":1,"t":"忽然，"},{"p":1,"t":"一头大狮子偷偷靠了过来。"},{"p":1,"t":"小鸭子和小兔子吓得话都说不出来了。"},{"p":1,"t":"箭猪摸摸身上的箭说："},{"p":1,"t":"别急，"},{"p":1,"t":"我有办法！"},{"p":2,"t":"说着，"},{"p":2,"t":"箭猪从身上拔下一支箭，"},{"p":2,"t":"让小兔子和小鸭子拉紧皮筋儿，"},{"p":2,"t":"小猴子上箭。"},{"p":2,"t":"嗖的一声，"},{"p":2,"t":"一箭射中了狮子的嘴唇。"},{"p":2,"t":"狮子疼得怪叫一声，"},{"p":2,"t":"就逃跑了！"},{"p":2,"t":"箭猪一下子成了小伙伴心中的小英雄。"},{"p":3,"t":"亲子心语"},{"p":4,"t":"每个人都有跟别人不一样的地方，"},{"p":4,"t":"面对那些不同的特点，"},{"p":4,"t":"我们不要去嘲笑或诋毁，"},{"p":4,"t":"而是要学会尊重，"},{"p":4,"t":"学会去包容，"},{"p":4,"t":"去接纳，"},{"p":4,"t":"要有宽阔的胸怀，"},{"p":4,"t":"这样才能拥有更多的朋友。"}]}];
+
+// BUILD MENU
+const menuGrid = document.getElementById('menu-grid');
+STORIES.forEach((story, si) => {
+  const card = document.createElement('div');
+  card.className = 'menu-card';
+  card.innerHTML = '<span class="card-num">'+(si+1)+'</span><span class="card-title">'+story.title+'</span>';
+  card.addEventListener('click', () => openStory(si));
+  menuGrid.appendChild(card);
+});
+
+// TTS
+const synth = window.speechSynthesis;
+let voices = [], playing = false, paused = false, stopped = false, currentIdx = 0;
+let allSpans = [];
+
+const menuScreen = document.getElementById('menu-screen');
+const readerScreen = document.getElementById('reader-screen');
+const storyText = document.getElementById('story-text');
+const storyTitleD = document.getElementById('story-title-display');
+const readerTitle = document.getElementById('reader-title');
+const btnBack = document.getElementById('btn-back');
+const btnPlay = document.getElementById('btn-play');
+const btnPause = document.getElementById('btn-pause');
+const btnStop = document.getElementById('btn-stop');
+const slider = document.getElementById('speed');
+const speedLbl = document.getElementById('speed-val');
+const vSel = document.getElementById('voice-select');
+const prog = document.getElementById('prog');
+const statusEl = document.getElementById('status');
+const wrap = document.getElementById('story-wrap');
+const controls = document.getElementById('controls');
+
+function adjustPadding() { wrap.style.paddingTop = controls.offsetHeight + 'px'; }
+window.addEventListener('resize', adjustPadding);
+
+function loadVoices() {
+  voices = synth.getVoices();
+  const zh = voices.filter(v => /^zh|^cmn/i.test(v.lang));
+  const list = zh.length ? zh : voices;
+  vSel.innerHTML = '';
+  list.forEach(v => {
+    const o = document.createElement('option');
+    o.value = voices.indexOf(v);
+    o.textContent = v.name + ' (' + v.lang + ')';
+    vSel.appendChild(o);
+  });
+  statusEl.textContent = zh.length ? '中国語音声 '+zh.length+'件' : '⚠ 中国語音声なし';
+}
+if (synth.addEventListener) synth.addEventListener('voiceschanged', loadVoices);
+else synth.onvoiceschanged = loadVoices;
+loadVoices();
+setTimeout(loadVoices, 600);
+
+slider.addEventListener('input', () => { speedLbl.textContent = parseFloat(slider.value).toFixed(1)+'×'; });
+
+function clearHL() { allSpans.forEach(s => s.classList.remove('active')); }
+function setHL(idx) {
+  clearHL();
+  if (idx < 0 || idx >= allSpans.length) return;
+  allSpans[idx].classList.add('active');
+  prog.style.width = ((idx/(allSpans.length-1))*100)+'%';
+  statusEl.textContent = '読んでいます… '+(idx+1)+' / '+allSpans.length;
+  const el = allSpans[idx];
+  const top = el.getBoundingClientRect().top - wrap.getBoundingClientRect().top + wrap.scrollTop;
+  wrap.scrollTo({ top: Math.max(0, top - wrap.clientHeight*0.35), behavior:'smooth' });
+}
+
+function speakFrom(idx) {
+  if (idx >= allSpans.length || stopped) {
+    clearHL(); prog.style.width = '100%';
+    statusEl.textContent = '読み終わりました ✓';
+    btnPlay.disabled = false; btnPlay.textContent = '▶ もう一度';
+    btnPause.disabled = true; btnStop.disabled = true; playing = false;
+    setTimeout(() => { prog.style.width = '0%'; }, 2000);
+    return;
+  }
+  currentIdx = idx;
+  setHL(idx);
+  const utt = new SpeechSynthesisUtterance(allSpans[idx].textContent);
+  utt.rate = parseFloat(slider.value);
+  utt.lang = 'zh-CN';
+  const vi = parseInt(vSel.value);
+  if (!isNaN(vi) && voices[vi]) { utt.voice = voices[vi]; utt.lang = voices[vi].lang; }
+  utt.onend = () => { if (!stopped && !paused) speakFrom(idx+1); };
+  utt.onerror = (e) => {
+    if (e.error === 'interrupted' || e.error === 'canceled') return;
+    statusEl.textContent = 'エラー: '+e.error;
+    playing = false; btnPlay.disabled = false; btnPause.disabled = true; btnStop.disabled = true;
+  };
+  synth.speak(utt);
+}
+
+function doPlayFrom(fromIdx) {
+  stopped = true; synth.cancel();
+  stopped = false; paused = false; playing = true;
+  btnPlay.disabled = true; btnPause.disabled = false; btnStop.disabled = false;
+  btnPause.textContent = '⏸ 一時停止';
+  speakFrom(fromIdx);
+}
+
+// DICT
+const dictOverlay = document.getElementById('dict-overlay');
+const dictWord = document.getElementById('dict-word');
+const dictPinyin = document.getElementById('dict-pinyin');
+const dictBody = document.getElementById('dict-body');
+const dictClose = document.getElementById('dict-close');
+const dictPlayBtn = document.getElementById('dict-play-btn');
+let dictCache = {}, dictTargetIdx = -1, dictTargetSpan = null;
+
+function closeDict() {
+  dictOverlay.classList.remove('show');
+  if (dictTargetSpan) dictTargetSpan.classList.remove('dict-hl');
+  dictTargetSpan = null;
+}
+dictClose.addEventListener('click', closeDict);
+dictOverlay.addEventListener('click', e => { if (e.target === dictOverlay) closeDict(); });
+dictPlayBtn.addEventListener('click', () => { const i = dictTargetIdx; closeDict(); if (i >= 0) doPlayFrom(i); });
+
+async function showDict(text, span, idx) {
+  if (dictTargetSpan) dictTargetSpan.classList.remove('dict-hl');
+  dictTargetSpan = span; dictTargetIdx = idx;
+  span.classList.add('dict-hl');
+  dictWord.textContent = text;
+  dictPinyin.textContent = '';
+  dictBody.innerHTML = '<div id="dict-loading">🔍 調べています…</div>';
+  dictOverlay.classList.add('show');
+
+  if (dictCache[text]) { renderDict(dictCache[text]); return; }
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        messages: [{ role: 'user', content:
+          '以下の中国語テキストについて、ピンイン・日本語の意味（簡潔に）・例文（中国語と日本語訳）を教えてください。JSONのみで返してください。形式: {"pinyin":"...","meaning":"...","example_zh":"...","example_ja":"..."} テキスト: ' + text
+        }]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    dictCache[text] = parsed;
+    renderDict(parsed);
+  } catch(e) {
+    dictBody.innerHTML = '<div style="color:#c0392b;padding:0.8rem 0">取得できませんでした。</div>';
+  }
+}
+
+function renderDict(d) {
+  dictPinyin.textContent = d.pinyin || '';
+  dictBody.innerHTML =
+    '<div class="dict-label">意味</div><div class="dict-content">'+(d.meaning||'—')+'</div>'+
+    '<div class="dict-label">例文</div><div class="dict-content">'+(d.example_zh||'—')+
+    '<div class="dict-example">'+(d.example_ja||'')+'</div></div>';
+}
+
+function openStory(si) {
+  const story = STORIES[si];
+  stopped = true; synth.cancel(); stopped = false;
+  playing = false; paused = false;
+  clearHL(); prog.style.width = '0%';
+  btnPlay.disabled = false; btnPlay.textContent = '▶ 読む';
+  btnPause.disabled = true; btnPause.textContent = '⏸ 一時停止';
+  btnStop.disabled = true;
+  storyText.innerHTML = ''; allSpans = [];
+  storyTitleD.textContent = story.title;
+  readerTitle.textContent = story.title;
+  statusEl.textContent = '準備完了';
+
+  let lastP = -1, paraEl = null;
+  story.data.forEach((item, i) => {
+    if (item.p !== lastP) {
+      paraEl = document.createElement('span');
+      paraEl.className = 'para';
+      storyText.appendChild(paraEl);
+      lastP = item.p;
+    }
+    const s = document.createElement('span');
+    s.className = 'chunk';
+    s.textContent = item.t;
+    allSpans.push(s);
+    let pressTimer = null;
+    s.addEventListener('pointerdown', () => {
+      pressTimer = setTimeout(() => { pressTimer = null; s.classList.add('tapped'); setTimeout(()=>s.classList.remove('tapped'),200); doPlayFrom(i); }, 450);
+    });
+    s.addEventListener('pointerup', () => {
+      if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; showDict(item.t, s, i); }
+    });
+    s.addEventListener('pointercancel', () => { clearTimeout(pressTimer); pressTimer = null; });
+    s.addEventListener('pointermove', () => { clearTimeout(pressTimer); pressTimer = null; });
+    paraEl.appendChild(s);
+  });
+
+  menuScreen.style.display = 'none';
+  readerScreen.style.display = 'block';
+  wrap.scrollTo({ top: 0, behavior: 'instant' });
+  setTimeout(adjustPadding, 50);
+}
+
+btnBack.addEventListener('click', () => {
+  stopped = true; synth.cancel(); stopped = false;
+  playing = false; paused = false;
+  readerScreen.style.display = 'none';
+  menuScreen.style.display = 'flex';
+});
+btnPlay.addEventListener('click', () => { btnPlay.textContent = '▶ 読む'; doPlayFrom(0); });
+btnPause.addEventListener('click', () => {
+  if (!paused) { synth.pause(); paused=true; playing=false; statusEl.textContent='一時停止中'; btnPause.textContent='▶ 続ける'; }
+  else { synth.resume(); paused=false; playing=true; btnPause.textContent='⏸ 一時停止'; statusEl.textContent='読んでいます… '+(currentIdx+1)+' / '+allSpans.length; }
+});
+btnStop.addEventListener('click', () => {
+  stopped=true; synth.cancel(); playing=false; paused=false; clearHL();
+  prog.style.width='0%'; statusEl.textContent='止めました';
+  btnPlay.disabled=false; btnPlay.textContent='▶ 読む';
+  btnPause.disabled=true; btnPause.textContent='⏸ 一時停止';
+  btnStop.disabled=true;
+  wrap.scrollTo({top:0,behavior:'smooth'});
+});
+</script>
+</body>
+</html>
